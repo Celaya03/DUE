@@ -1,13 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Sidebar } from "./dashboard/sidebar"
 import { DashboardOverview } from "./dashboard/dashboard-overview"
 import { KanbanBoard } from "./kanban/kanban-board"
 import { HabitsView } from "./habits/habits-view"
 import { FinanceView } from "./finance/finance-view"
 import type { Task, Habit, Transaction } from "@/lib/types"
-import { initialTasks, initialHabits, initialTransactions } from "@/lib/store"
+import {
+  initialTasks,
+  initialHabits,
+  initialTransactions,
+  loadFromStorage,
+  saveToStorage,
+  storageKeys,
+} from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 type View = "dashboard" | "kanban" | "finance" | "habits"
@@ -15,9 +22,23 @@ type View = "dashboard" | "kanban" | "finance" | "habits"
 export function AppShell() {
   const [currentView, setCurrentView] = useState<View>("dashboard")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
-  const [habits, setHabits] = useState<Habit[]>(initialHabits)
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions)
+  const [tasks, setTasks] = useState<Task[]>(() => loadFromStorage(storageKeys.tasks, initialTasks))
+  const [habits, setHabits] = useState<Habit[]>(() => loadFromStorage(storageKeys.habits, initialHabits))
+  const [transactions, setTransactions] = useState<Transaction[]>(() =>
+    loadFromStorage(storageKeys.transactions, initialTransactions)
+  )
+
+  useEffect(() => {
+    saveToStorage(storageKeys.tasks, tasks)
+  }, [tasks])
+
+  useEffect(() => {
+    saveToStorage(storageKeys.habits, habits)
+  }, [habits])
+
+  useEffect(() => {
+    saveToStorage(storageKeys.transactions, transactions)
+  }, [transactions])
 
   const renderView = () => {
     switch (currentView) {

@@ -1,5 +1,27 @@
 import type { Task, Habit, Transaction } from "./types"
 
+export const storageKeys = {
+  tasks: "due_tasks",
+  habits: "due_habits",
+  transactions: "due_transactions",
+}
+
+export const loadFromStorage = <T,>(key: string, fallback: T): T => {
+  if (globalThis.window === undefined) return fallback
+
+  try {
+    const raw = globalThis.window.localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+export const saveToStorage = <T,>(key: string, data: T) => {
+  if (globalThis.window === undefined) return
+  globalThis.window.localStorage.setItem(key, JSON.stringify(data))
+}
+
 // Datos iniciales de demo
 export const initialTasks: Task[] = [
   {
