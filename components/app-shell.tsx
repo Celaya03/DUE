@@ -7,38 +7,45 @@ import { KanbanBoard } from "./kanban/kanban-board"
 import { HabitsView } from "./habits/habits-view"
 import { FinanceView } from "./finance/finance-view"
 import type { Task, Habit, Transaction } from "@/lib/types"
-import {
-  initialTasks,
-  initialHabits,
-  initialTransactions,
-  loadFromStorage,
-  saveToStorage,
-  storageKeys,
-} from "@/lib/store"
+import { useAuth } from "@/lib/auth-context"
+import { getUserStorageKeys, loadFromStorage, saveToStorage } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 type View = "dashboard" | "kanban" | "finance" | "habits"
 
 export function AppShell() {
+  const { user } = useAuth()
   const [currentView, setCurrentView] = useState<View>("dashboard")
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [tasks, setTasks] = useState<Task[]>(() => loadFromStorage(storageKeys.tasks, initialTasks))
-  const [habits, setHabits] = useState<Habit[]>(() => loadFromStorage(storageKeys.habits, initialHabits))
+  const storageKeys = user ? getUserStorageKeys(user.id) : null
+
+  const [tasks, setTasks] = useState<Task[]>(() =>
+    storageKeys ? loadFromStorage(storageKeys.tasks, []) : []
+  )
+  const [habits, setHabits] = useState<Habit[]>(() =>
+    storageKeys ? loadFromStorage(storageKeys.habits, []) : []
+  )
   const [transactions, setTransactions] = useState<Transaction[]>(() =>
-    loadFromStorage(storageKeys.transactions, initialTransactions)
+    storageKeys ? loadFromStorage(storageKeys.transactions, []) : []
   )
 
   useEffect(() => {
+    if (!storageKeys) return
     saveToStorage(storageKeys.tasks, tasks)
-  }, [tasks])
+  }, [storageKeys, tasks])
 
   useEffect(() => {
+    if (!storageKeys) return
     saveToStorage(storageKeys.habits, habits)
-  }, [habits])
+  }, [storageKeys, habits])
 
   useEffect(() => {
+    if (!storageKeys) return
     saveToStorage(storageKeys.transactions, transactions)
-  }, [transactions])
+  }, [storageKeys, transactions])
+
+  if (!user || !storageKeys) {
+    return null
+  }
 
   const renderView = () => {
     switch (currentView) {

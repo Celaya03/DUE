@@ -1,10 +1,10 @@
 import type { Task, Habit, Transaction } from "./types"
 
-export const storageKeys = {
-  tasks: "due_tasks",
-  habits: "due_habits",
-  transactions: "due_transactions",
-}
+export const getUserStorageKeys = (userId: string) => ({
+  tasks: `due_tasks_${userId}`,
+  habits: `due_habits_${userId}`,
+  transactions: `due_transactions_${userId}`,
+})
 
 export const loadFromStorage = <T,>(key: string, fallback: T): T => {
   if (globalThis.window === undefined) return fallback
