@@ -84,6 +84,60 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
     }, {}),
   ).map(([category, amount]) => ({ category, amount }))
 
+  const topCategories = Object.entries(
+    transactions
+      .filter((t) => t.type === "gasto")
+      .reduce<Record<string, number>>((acc, t) => {
+        acc[t.category] = (acc[t.category] || 0) + t.amount
+        return acc
+      }, {})
+  )
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+
+  const cashFlowData = Object.values(
+    transactions
+      .slice()
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .reduce<Record<string, { date: string; income: number; expense: number }>>(
+        (acc, transaction) => {
+          const date = transaction.date
+          if (!acc[date]) {
+            acc[date] = { date, income: 0, expense: 0 }
+          }
+          if (transaction.type === "ingreso") {
+            acc[date].income += transaction.amount
+          } else {
+            acc[date].expense += transaction.amount
+          }
+          return acc
+        },
+        {}
+      )
+  )
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .reduce(
+      (acc, current) => {
+        const previousBalance = acc.length > 0 ? acc[acc.length - 1].balance : 0
+        acc.push({
+          ...current,
+          balance: previousBalance + current.income - current.expense,
+          formattedDate: new Date(current.date).toLocaleDateString("es-ES", {
+            day: "numeric",
+            month: "short",
+          }),
+        })
+        return acc
+      },
+      [] as Array<{
+        date: string
+        income: number
+        expense: number
+        balance: number
+        formattedDate: string
+      }>
+    )
+
   const expenseColors = ["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308", "#ec4899"]
 
   return (
@@ -268,6 +322,98 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
                   </Recharts.Pie>
                   <ChartTooltip />
                   <ChartLegend />
+                </Recharts.PieChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Financial Charts */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Flujo de Caja</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {cashFlowData.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                Registra transacciones para ver el flujo de caja.
+              </p>
+            ) : (
+              <ChartContainer
+                id="dashboard-cash-flow"
+                config={{
+                  balance: { label: "Balance", color: "#0ea5e9" },
+                }}
+              >
+                <Recharts.LineChart
+                  data={cashFlowData}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                >
+                  <Recharts.CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <Recharts.XAxis dataKey="formattedDate" stroke="var(--muted-foreground)" />
+                  <Recharts.YAxis stroke="var(--muted-foreground)" />
+                  <ChartTooltip />
+                  <Recharts.Line
+                    type="monotone"
+                    dataKey="balance"
+                    stroke="#0ea5e9"
+                    strokeWidth={3}
+                    dot
+                  />
+                </Recharts.LineChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Top 5 Gastos por Categoría</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topCategories.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                Registra tus gastos para ver esta gráfica.
+              </p>
+            ) : (
+              <ChartContainer
+                id="dashboard-top-categories"
+                config={Object.fromEntries(
+                  topCategories.map(([category], index) => [
+                    category,
+                    {
+                      label: category,
+                      color: ["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308"][
+                        index % 5
+                      ],
+                    },
+                  ]),
+                )}
+              >
+                <Recharts.PieChart>
+                  <Recharts.Pie
+                    data={topCategories.map(([category, amount]) => ({
+                      category,
+                      amount,
+                    }))}
+                    dataKey="amount"
+                    nameKey="category"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={4}
+                  >
+                    {topCategories.map(([, ], index) => (
+                      <Recharts.Cell
+                        key={index}
+                        fill={["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308"][
+                          index % 5
+                        ]}
+                      />
+                    ))}
+                  </Recharts.Pie>
+                  <ChartTooltip />
                 </Recharts.PieChart>
               </ChartContainer>
             )}

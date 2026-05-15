@@ -390,10 +390,10 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Desglose de gastos</CardTitle>
+            <CardTitle>Top 5 Gastos por Categoría</CardTitle>
           </CardHeader>
           <CardContent>
-            {Object.keys(groupedByCategory).length === 0 ? (
+            {Object.keys(topCategories).length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
                 Registra tus gastos para ver esta gráfica.
               </p>
@@ -401,12 +401,12 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
               <ChartContainer
                 id="finance-expense-category"
                 config={Object.fromEntries(
-                  Object.keys(groupedByCategory).map((category, index) => [
+                  Object.keys(topCategories).map((category, index) => [
                     category,
                     {
                       label: category,
-                      color: ["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308", "#ec4899"][
-                        index % 6
+                      color: ["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308"][
+                        index % 5
                       ],
                     },
                   ]),
@@ -414,7 +414,7 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
               >
                 <Recharts.PieChart>
                   <Recharts.Pie
-                    data={Object.entries(groupedByCategory).map(([category, amount]) => ({
+                    data={Object.entries(topCategories).map(([category, amount]) => ({
                       category,
                       amount,
                     }))}
@@ -424,11 +424,11 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
                     outerRadius={80}
                     paddingAngle={4}
                   >
-                    {Object.keys(groupedByCategory).map((category, index) => (
+                    {Object.keys(topCategories).map((category, index) => (
                       <Recharts.Cell
                         key={category}
-                        fill={["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308", "#ec4899"][
-                          index % 6
+                        fill={["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308"][
+                          index % 5
                         ]}
                       />
                     ))}
@@ -558,13 +558,13 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
         {/* Expenses by Category */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Gastos por Categoria</CardTitle>
+            <CardTitle className="text-lg">Top Gastos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {Object.keys(groupedByCategory).length === 0 ? (
+            {Object.keys(topCategories).length === 0 ? (
               <p className="text-muted-foreground text-center py-4">Sin gastos registrados</p>
             ) : (
-              Object.entries(groupedByCategory)
+              Object.entries(topCategories)
                 .sort(([, a], [, b]) => b - a)
                 .map(([category, amount]) => (
                   <div key={category} className="flex items-center justify-between">
