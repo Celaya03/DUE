@@ -147,6 +147,60 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
       {} as Record<string, number>
     )
 
+  const topCategories = Object.entries(groupedByCategory)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .reduce(
+      (acc, [category, amount]) => {
+        acc[category] = amount
+        return acc
+      },
+      {} as Record<string, number>
+    )
+
+  const cashFlowData = Object.values(
+    transactions
+      .slice()
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .reduce<Record<string, { date: string; income: number; expense: number }>>(
+        (acc, transaction) => {
+          const date = transaction.date
+          if (!acc[date]) {
+            acc[date] = { date, income: 0, expense: 0 }
+          }
+          if (transaction.type === "ingreso") {
+            acc[date].income += transaction.amount
+          } else {
+            acc[date].expense += transaction.amount
+          }
+          return acc
+        },
+        {}
+      )
+  )
+  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  .reduce(
+    (acc, current) => {
+      const previousBalance = acc.length > 0 ? acc[acc.length - 1].balance : 0
+      acc.push({
+        ...current,
+        balance: previousBalance + current.income - current.expense,
+        formattedDate: new Date(current.date).toLocaleDateString("es-ES", {
+          day: "numeric",
+          month: "short",
+        }),
+      })
+      return acc
+    },
+    [] as Array<{
+      date: string
+      income: number
+      expense: number
+      balance: number
+      formattedDate: string
+    }>
+  )
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -388,30 +442,38 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
 
         <Card>
           <CardHeader>
-            <CardTitle>Flujo rápido</CardTitle>
+            <CardTitle>Flujo de caja</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-2xl border border-border/50 bg-muted/50 p-4">
-              <p className="text-sm text-muted-foreground">Saldo neto</p>
-              <p
-                className={cn(
-                  "text-3xl font-bold",
-                  balance >= 0 ? "text-success" : "text-destructive"
-                )}
-              >
-                ${balance.toLocaleString()}
+          <CardContent>
+            {cashFlowData.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                Registra transacciones para ver el flujo de caja.
               </p>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Transacciones totales</span>
-                <span className="font-medium text-foreground">{transactions.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Categorias distintas</span>
-                <span className="font-medium text-foreground">{Object.keys(groupedByCategory).length}</span>
-              </div>
-            </div>
+            ) : (
+              <ChartContainer
+                id="finance-cash-flow"
+                config={{
+                  balance: { label: "Balance", color: "#0ea5e9" },
+                }}
+              >
+                <Recharts.LineChart
+                  data={cashFlowData}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                >
+                  <Recharts.CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <Recharts.XAxis dataKey="formattedDate" stroke="var(--muted-foreground)" />
+                  <Recharts.YAxis stroke="var(--muted-foreground)" />
+                  <ChartTooltip />
+                  <Recharts.Line
+                    type="monotone"
+                    dataKey="balance"
+                    stroke="#0ea5e9"
+                    strokeWidth={3}
+                    dot
+                  />
+                </Recharts.LineChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
       </div>
