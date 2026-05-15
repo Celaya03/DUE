@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
+import { DatePicker } from "@/components/ui/date-picker"
 import type { Task, TaskStatus, TaskPriority } from "@/lib/types"
 import { Trash2 } from "lucide-react"
 
@@ -36,7 +37,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<TaskStatus>("pendiente")
   const [priority, setPriority] = useState<TaskPriority>("media")
-  const [dueDate, setDueDate] = useState("")
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
 
   useEffect(() => {
     if (task) {
@@ -44,13 +45,13 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
       setDescription(task.description || "")
       setStatus(task.status)
       setPriority(task.priority)
-      setDueDate(task.dueDate || "")
+      setDueDate(task.dueDate ? new Date(task.dueDate) : undefined)
     } else {
       setTitle("")
       setDescription("")
       setStatus("pendiente")
       setPriority("media")
-      setDueDate("")
+      setDueDate(undefined)
     }
   }, [task])
 
@@ -63,7 +64,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
       description: description.trim() || undefined,
       status,
       priority,
-      dueDate: dueDate || undefined,
+      dueDate: dueDate ? dueDate.toISOString().split("T")[0] : undefined,
       createdAt: task?.createdAt || new Date().toISOString(),
     }
 
@@ -141,10 +142,10 @@ export function TaskEditModal({ task, isOpen, onClose, onSave, onDelete }: TaskE
 
           <Field>
             <FieldLabel>Fecha de vencimiento</FieldLabel>
-            <Input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+            <DatePicker
+              date={dueDate}
+              onDateChange={setDueDate}
+              placeholder="Selecciona una fecha"
             />
           </Field>
         </FieldGroup>

@@ -16,6 +16,8 @@ interface KanbanColumnProps {
   title: string
   color: string
   tasks: Task[]
+  selectedTasks?: Set<string>
+  onToggleSelect?: (taskId: string) => void
   onAddTask: (title: string) => void
   onDeleteTask: (taskId: string) => void
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void
@@ -27,6 +29,8 @@ export function KanbanColumn({
   title,
   color,
   tasks,
+  selectedTasks,
+  onToggleSelect,
   onAddTask,
   onDeleteTask,
   onUpdateTask,
@@ -70,6 +74,8 @@ export function KanbanColumn({
             <KanbanCard
               key={task.id}
               task={task}
+              isSelected={selectedTasks?.has(task.id)}
+              onToggleSelect={onToggleSelect ? () => onToggleSelect(task.id) : undefined}
               onDelete={() => onDeleteTask(task.id)}
               onUpdate={(updates) => onUpdateTask(task.id, updates)}
               onEdit={() => onEditTask(task)}

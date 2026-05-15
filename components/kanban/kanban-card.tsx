@@ -14,11 +14,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { Task, TaskPriority } from "@/lib/types"
 import { GripVertical, MoreHorizontal, Trash2, Calendar, Flag, Pencil } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 
 interface KanbanCardProps {
   task: Task
   isDragging?: boolean
+  isSelected?: boolean
+  onToggleSelect?: () => void
   onDelete?: () => void
   onUpdate?: (updates: Partial<Task>) => void
   onEdit?: () => void
@@ -36,7 +39,7 @@ const priorityLabels: Record<TaskPriority, string> = {
   baja: "Baja",
 }
 
-export function KanbanCard({ task, isDragging, onDelete, onUpdate, onEdit }: KanbanCardProps) {
+export function KanbanCard({ task, isDragging, isSelected, onToggleSelect, onDelete, onUpdate, onEdit }: KanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -64,6 +67,13 @@ export function KanbanCard({ task, isDragging, onDelete, onUpdate, onEdit }: Kan
     >
       <CardContent className="p-3">
         <div className="flex items-start gap-2">
+          {onToggleSelect && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={onToggleSelect}
+              className="mt-0.5"
+            />
+          )}
           <button
             {...attributes}
             {...listeners}

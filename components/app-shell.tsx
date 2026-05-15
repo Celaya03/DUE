@@ -10,12 +10,15 @@ import type { Task, Habit, Transaction } from "@/lib/types"
 import { useAuth } from "@/lib/auth-context"
 import { getUserStorageKeys, loadFromStorage, saveToStorage } from "@/lib/store"
 import { cn } from "@/lib/utils"
+import { toast } from "@/hooks/use-toast"
 
 type View = "dashboard" | "kanban" | "finance" | "habits"
 
 export function AppShell() {
   const { user } = useAuth()
   const [currentView, setCurrentView] = useState<View>("dashboard")
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [reminderSent, setReminderSent] = useState(false)
   const storageKeys = user ? getUserStorageKeys(user.id) : null
 
   const [tasks, setTasks] = useState<Task[]>(() =>
@@ -43,6 +46,33 @@ export function AppShell() {
     saveToStorage(storageKeys.transactions, transactions)
   }, [storageKeys, transactions])
 
+  useEffect(() => {
+    if (reminderSent || !tasks.length) return
+
+    const today = new Date().toISOString().split("T")[0]
+    const dueTasks = tasks.filter(
+      (task) => task.dueDate && task.dueDate <= today && task.status !== "completado"
+    )
+
+    if (dueTasks.length > 0) {
+      toast({
+        title: "Recordatorio de tareas",
+        description: `Tienes ${dueTasks.length} tarea(s) con fecha de hoy o atrasadas.`,
+      })
+      setReminderSent(true)
+      return
+    }
+
+    const pendingCount = tasks.filter((task) => task.status === "pendiente").length
+    if (pendingCount > 0) {
+      toast({
+        title: "Tareas pendientes",
+        description: `Aún tienes ${pendingCount} tareas pendientes. Organiza tu día.`,
+      })
+      setReminderSent(true)
+    }
+  }, [reminderSent, tasks])
+
   if (!user || !storageKeys) {
     return null
   }
@@ -51,7 +81,12 @@ export function AppShell() {
     switch (currentView) {
       case "dashboard":
         return (
-          <DashboardOverview tasks={tasks} habits={habits} transactions={transactions} />
+          <DashboardOverview
+            userName={user.name}
+            tasks={tasks}
+            habits={habits}
+            transactions={transactions}
+          />
         )
       case "kanban":
         return <KanbanBoard tasks={tasks} onTasksChange={setTasks} />

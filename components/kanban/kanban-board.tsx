@@ -39,6 +39,7 @@ export function KanbanBoard({ tasks, onTasksChange }: KanbanBoardProps) {
   const [sortBy, setSortBy] = useState<"date" | "priority">("date")
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -138,6 +139,33 @@ export function KanbanBoard({ tasks, onTasksChange }: KanbanBoardProps) {
     setIsModalOpen(true)
   }
 
+  const handleToggleTaskSelection = (taskId: string) => {
+    const newSelected = new Set(selectedTasks)
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId)
+    } else {
+      newSelected.add(taskId)
+    }
+    setSelectedTasks(newSelected)
+  }
+
+  const handleSelectAll = () => {
+    const allTaskIds = new Set(filteredTasks.map(t => t.id))
+    setSelectedTasks(allTaskIds)
+  }
+
+  const handleDeselectAll = () => {
+    setSelectedTasks(new Set())
+  }
+
+  const handleMoveSelectedTasks = (newStatus: TaskStatus) => {
+    const updatedTasks = tasks.map(task =>
+      selectedTasks.has(task.id) ? { ...task, status: newStatus } : task
+    )
+    onTasksChange(updatedTasks)
+    setSelectedTasks(new Set())
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -146,11 +174,40 @@ export function KanbanBoard({ tasks, onTasksChange }: KanbanBoardProps) {
           <h1 className="text-2xl font-bold text-foreground">Tablero de Tareas</h1>
           <p className="text-muted-foreground">Organiza tus tareas de forma visual</p>
         </div>
-        <Button onClick={handleNewTask}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Tarea
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleSelectAll}>
+            Seleccionar Todas
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDeselectAll}>
+            Deseleccionar
+          </Button>
+          <Button onClick={handleNewTask}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Tarea
+          </Button>
+        </div>
       </div>
+
+      {/* Bulk Actions */}
+      {selectedTasks.size > 0 && (
+        <div className="flex flex-wrap gap-2 p-4 bg-muted rounded-lg">
+          <span className="text-sm font-medium">
+            {selectedTasks.size} tarea{selectedTasks.size > 1 ? 's' : ''} seleccionada{selectedTasks.size > 1 ? 's' : ''}
+          </span>
+          <Button size="sm" onClick={() => handleMoveSelectedTasks("pendiente")}>
+            Mover a Pendiente
+          </Button>
+          <Button size="sm" onClick={() => handleMoveSelectedTasks("en-proceso")}>
+            Mover a En Proceso
+          </Button>
+          <Button size="sm" onClick={() => handleMoveSelectedTasks("completado")}>
+            Mover a Completado
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleDeselectAll}>
+            Deseleccionar
+          </Button>
+        </div>
+      )}
 
       {/* Filters */}
       <TaskFilters
@@ -179,6 +236,8 @@ export function KanbanBoard({ tasks, onTasksChange }: KanbanBoardProps) {
               title={column.title}
               color={column.color}
               tasks={sortedTasks.filter((t) => t.status === column.id)}
+              selectedTasks={selectedTasks}
+              onToggleSelect={handleToggleTaskSelection}
               onAddTask={(title) => handleAddTask(column.id, title)}
               onDeleteTask={handleDeleteTask}
               onUpdateTask={handleUpdateTask}

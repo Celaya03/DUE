@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
 import {
   Select,
   SelectContent,
@@ -26,7 +27,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
+import { DatePicker } from "@/components/ui/date-picker"
 import type { Transaction } from "@/lib/types"
+import * as Recharts from "recharts"
 import {
   Plus,
   TrendingUp,
@@ -60,7 +63,7 @@ const emptyTransaction = {
   amount: "",
   type: "gasto" as "ingreso" | "gasto",
   category: "Otros",
-  date: new Date().toISOString().split("T")[0],
+  date: new Date(),
 }
 
 export function FinanceView({ transactions, onTransactionsChange }: FinanceViewProps) {
@@ -89,7 +92,7 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
       amount: transaction.amount.toString(),
       type: transaction.type,
       category: transaction.category,
-      date: transaction.date,
+      date: new Date(transaction.date),
     })
     setIsDialogOpen(true)
   }
@@ -107,7 +110,7 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
                   amount: parseFloat(formData.amount),
                   type: formData.type,
                   category: formData.category,
-                  date: formData.date,
+                  date: formData.date.toISOString().split("T")[0],
                 }
               : t
           )
@@ -119,7 +122,7 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
           description: formData.description,
           amount: parseFloat(formData.amount),
           type: formData.type,
-          date: formData.date,
+          date: formData.date.toISOString().split("T")[0],
           category: formData.category,
         }
         onTransactionsChange([transaction, ...transactions])
@@ -215,12 +218,10 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
 
             <Field>
               <FieldLabel>Fecha</FieldLabel>
-              <Input
-                type="date"
-                value={formData.date}
-                onChange={(e) =>
-                  setFormData({ ...formData, date: e.target.value })
-                }
+              <DatePicker
+                date={formData.date}
+                onDateChange={(date) => setFormData({ ...formData, date: date || new Date() })}
+                placeholder="Selecciona una fecha"
               />
             </Field>
 
@@ -326,6 +327,89 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
                 <Wallet
                   className={cn("h-6 w-6", balance >= 0 ? "text-primary" : "text-destructive")}
                 />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Desglose de gastos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {Object.keys(groupedByCategory).length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                Registra tus gastos para ver esta gráfica.
+              </p>
+            ) : (
+              <ChartContainer
+                id="finance-expense-category"
+                config={Object.fromEntries(
+                  Object.keys(groupedByCategory).map((category, index) => [
+                    category,
+                    {
+                      label: category,
+                      color: ["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308", "#ec4899"][
+                        index % 6
+                      ],
+                    },
+                  ]),
+                )}
+              >
+                <Recharts.PieChart>
+                  <Recharts.Pie
+                    data={Object.entries(groupedByCategory).map(([category, amount]) => ({
+                      category,
+                      amount,
+                    }))}
+                    dataKey="amount"
+                    nameKey="category"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={4}
+                  >
+                    {Object.keys(groupedByCategory).map((category, index) => (
+                      <Recharts.Cell
+                        key={category}
+                        fill={["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308", "#ec4899"][
+                          index % 6
+                        ]}
+                      />
+                    ))}
+                  </Recharts.Pie>
+                  <ChartTooltip />
+                </Recharts.PieChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Flujo rápido</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-2xl border border-border/50 bg-muted/50 p-4">
+              <p className="text-sm text-muted-foreground">Saldo neto</p>
+              <p
+                className={cn(
+                  "text-3xl font-bold",
+                  balance >= 0 ? "text-success" : "text-destructive"
+                )}
+              >
+                ${balance.toLocaleString()}
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Transacciones totales</span>
+                <span className="font-medium text-foreground">{transactions.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Categorias distintas</span>
+                <span className="font-medium text-foreground">{Object.keys(groupedByCategory).length}</span>
               </div>
             </div>
           </CardContent>

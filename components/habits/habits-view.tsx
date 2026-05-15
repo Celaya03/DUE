@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
+import { toast } from "@/hooks/use-toast"
 import type { Habit } from "@/lib/types"
 import {
   Check,
@@ -107,6 +108,10 @@ export function HabitsView({ habits, onHabitsChange }: HabitsViewProps) {
               : h
           )
         )
+        toast({
+          title: "Hábito actualizado",
+          description: `El hábito "${formData.name}" se actualizó correctamente.`,
+        })
       } else {
         // Crear nuevo
         const newHabit: Habit = {
@@ -117,6 +122,10 @@ export function HabitsView({ habits, onHabitsChange }: HabitsViewProps) {
           streak: 0,
         }
         onHabitsChange([...habits, newHabit])
+        toast({
+          title: "Hábito creado",
+          description: `Se agregó el hábito "${formData.name}" a tu rutina.`,
+        })
       }
       setIsDialogOpen(false)
       setFormData(emptyHabit)
@@ -129,21 +138,33 @@ export function HabitsView({ habits, onHabitsChange }: HabitsViewProps) {
   }
 
   const toggleHabit = (habitId: string) => {
-    onHabitsChange(
-      habits.map((h) =>
-        h.id === habitId
-          ? {
-              ...h,
-              completed: !h.completed,
-              streak: !h.completed ? h.streak + 1 : Math.max(0, h.streak - 1),
-            }
-          : h
-      )
+    const habit = habits.find((h) => h.id === habitId)
+    const updatedHabits = habits.map((h) =>
+      h.id === habitId
+        ? {
+            ...h,
+            completed: !h.completed,
+            streak: !h.completed ? h.streak + 1 : Math.max(0, h.streak - 1),
+          }
+        : h
     )
+    onHabitsChange(updatedHabits)
+    if (habit) {
+      toast({
+        title: habit.completed ? "Hábito desmarcado" : "Hábito completado",
+        description: habit.completed
+          ? `El hábito "${habit.name}" volvió a pendiente.`
+          : `¡Bien hecho! Completaste "${habit.name}".`,
+      })
+    }
   }
 
   const resetAllHabits = () => {
     onHabitsChange(habits.map((h) => ({ ...h, completed: false })))
+    toast({
+      title: "Rutina reiniciada",
+      description: "Tus hábitos se han marcado como no completados para el nuevo día.",
+    })
   }
 
   return (
