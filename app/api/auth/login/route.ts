@@ -1,70 +1,45 @@
 import { NextResponse } from "next/server"
-import { getAppData, saveAppData } from "@/lib/db"
+import { loginUser } from "@/lib/auth-utils"
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
+    const { email, password } = await request.json()
 
-    if (!userId) {
+    if (!email || !password) {
       return NextResponse.json(
-        { error: "Usuario no autenticado" },
-        { status: 401 }
-      )
-    }
-
-    const data = await getAppData(userId)
-
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error("GET /api/data error:", error)
-
-    return NextResponse.json(
-      { error: "Error cargando datos" },
-      { status: 500 }
-    )
-  }
-}
-
-export async function PUT(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Usuario no autenticado" },
-        { status: 401 }
-      )
-    }
-
-    const payload = await request.json()
-
-    if (
-      !payload ||
-      !Array.isArray(payload.tasks) ||
-      !Array.isArray(payload.habits) ||
-      !Array.isArray(payload.transactions)
-    ) {
-      return NextResponse.json(
-        { error: "Payload inválido" },
+        { error: "Email y contraseña requeridos" },
         { status: 400 }
       )
     }
 
-    await saveAppData(userId, {
-      tasks: payload.tasks,
-      habits: payload.habits,
-      transactions: payload.transactions,
-    })
+    const user = await loginUser(email, password)
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("PUT /api/data error:", error)
+    const response = NextResponse.json(
+      {
+        user,
+        message: "Login exitoso",
+      },
+      { status: 200 }
+    )
 
+    response.cookies.set(
+      "due_auth_session",
+      JSON.stringify(user),
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+      }
+    )
+
+    return response
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Error guardando datos" },
-      { status: 500 }
+      {
+        error: error.message || "Error en login",
+      },
+      { status: 401 }
     )
   }
 }
