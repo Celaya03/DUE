@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server"
 import { getAppData, saveAppData } from "@/lib/db"
-
-const getUserId = (request: Request) => {
-  const url = new URL(request.url)
-  return url.searchParams.get("userId") || null
-}
+import { getAuthenticatedUserId } from "@/lib/auth-server"
 
 export async function GET(request: Request) {
-  const userId = getUserId(request)
+  // Obtener userId desde la sesión segura, NO del cliente
+  const userId = await getAuthenticatedUserId()
+  
   if (!userId) {
-    return NextResponse.json({ error: "Missing userId" }, { status: 400 })
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
   const data = await getAppData(userId)
@@ -17,17 +15,22 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  // Obtener userId desde la sesión segura, NO del cliente
+  const userId = await getAuthenticatedUserId()
+  
+  if (!userId) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+  }
+
   const payload = await request.json()
-  const userId = payload?.userId || getUserId(request)
 
   if (
-    !userId ||
     !payload ||
     !Array.isArray(payload.tasks) ||
     !Array.isArray(payload.habits) ||
     !Array.isArray(payload.transactions)
   ) {
-    return NextResponse.json({ error: "Invalid payload or missing userId" }, { status: 400 })
+    return NextResponse.json({ error: "Payload inválido" }, { status: 400 })
   }
 
   await saveAppData(userId, {
@@ -38,3 +41,4 @@ export async function PUT(request: Request) {
 
   return NextResponse.json({ success: true })
 }
+

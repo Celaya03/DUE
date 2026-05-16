@@ -31,7 +31,7 @@ export function AppShell() {
 
     const loadData = async () => {
       try {
-        const response = await fetch(`/api/data?userId=${encodeURIComponent(user.id)}`)
+        const response = await fetch(`/api/data`)
         if (!response.ok) return
         const data = (await response.json()) as {
           tasks: Task[]
@@ -61,10 +61,10 @@ export function AppShell() {
 
     const saveData = async () => {
       try {
-        await fetch(`/api/data?userId=${encodeURIComponent(user.id)}`, {
+        await fetch(`/api/data`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: user.id, tasks, habits, transactions }),
+          body: JSON.stringify({ tasks, habits, transactions }),
         })
       } catch (error) {
         console.error("Error saving app data:", error)

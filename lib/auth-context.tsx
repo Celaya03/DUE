@@ -49,26 +49,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: "Email y contraseña (min. 6 caracteres) requeridos" }
     }
 
-    const users = getStoredUsers()
-    const existingUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
-    
-    if (!existingUser) {
-      return { success: false, error: "Usuario no encontrado. Por favor regístrate primero." }
-    }
-    
-    if (existingUser.password !== password) {
-      return { success: false, error: "Contraseña incorrecta" }
-    }
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
 
-    const sessionUser: User = {
-      id: existingUser.id,
-      name: existingUser.name,
-      email: existingUser.email,
+      const data = await response.json()
+      
+      if (!response.ok) {
+        return { success: false, error: data.error || "Error en el login" }
+      }
+
+      const sessionUser: User = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+      }
+      
+      setUser(sessionUser)
+      localStorage.setItem("due_session", JSON.stringify(sessionUser))
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: "Error al conectar con el servidor" }
     }
-    
-    setUser(sessionUser)
-    localStorage.setItem("due_session", JSON.stringify(sessionUser))
-    return { success: true }
   }
 
   const register = async (name: string, email: string, password: string): Promise<{ success: boolean; error?: string }> => {
@@ -78,38 +83,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: "Todos los campos son requeridos (contraseña min. 6 caracteres)" }
     }
 
-    const users = getStoredUsers()
-    const existingUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
-    
-    if (existingUser) {
-      return { success: false, error: "Este correo ya está registrado. Inicia sesión." }
-    }
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      })
 
-    const newUser: StoredUser = {
-      id: crypto.randomUUID(),
-      name,
-      email,
-      password,
-    }
-    
-    users.push(newUser)
-    saveStoredUsers(users)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        return { success: false, error: data.error || "Error en el registro" }
+      }
 
-    const sessionUser: User = {
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
+      const sessionUser: User = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+      }
+      
+      setUser(sessionUser)
+      localStorage.setItem("due_session", JSON.stringify(sessionUser))
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: "Error al conectar con el servidor" }
     }
-    
-    setUser(sessionUser)
-    localStorage.setItem("due_session", JSON.stringify(sessionUser))
-    return { success: true }
   }
 
   const logout = () => {
     setUser(null)
     localStorage.removeItem("due_session")
-    // No eliminamos due_users para que pueda volver a ingresar
+    
+    // Notificar al servidor para limpiar la sesión
+    fetch("/api/auth/logout", { method: "POST" }).catch((error) => {
+      console.error("Error al hacer logout:", error)
+    })
   }
 
   return (
