@@ -143,6 +143,14 @@ export async function getAppData(userId: string): Promise<DbData> {
   }
 }
 
+export async function recreateTables(): Promise<void> {
+  // Drop existing tables and recreate them with the correct schema
+  await pool.query("DROP TABLE IF EXISTS tasks")
+  await pool.query("DROP TABLE IF EXISTS habits")
+  await pool.query("DROP TABLE IF EXISTS transactions")
+  await ensureTables()
+}
+
 export async function saveAppData(userId: string, data: DbData): Promise<void> {
   await ensureTables()
 
