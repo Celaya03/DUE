@@ -9,9 +9,18 @@ export async function getAuthenticatedUserId(): Promise<string | null> {
       return null
     }
 
-    const user = JSON.parse(sessionCookie.value)
+    // Decodificar la cookie si es necesario
+    let cookieValue = sessionCookie.value
+    try {
+      cookieValue = decodeURIComponent(cookieValue)
+    } catch {
+      // Si no se puede decodificar, usar el valor original
+    }
+
+    const user = JSON.parse(cookieValue)
     return user?.id || null
-  } catch {
+  } catch (error) {
+    console.error("[v0] Error getting authenticated user ID:", error)
     return null
   }
 }
@@ -25,9 +34,18 @@ export async function getAuthenticatedUser(): Promise<{ id: string; name: string
       return null
     }
 
-    const user = JSON.parse(sessionCookie.value)
+    // Decodificar la cookie si es necesario
+    let cookieValue = sessionCookie.value
+    try {
+      cookieValue = decodeURIComponent(cookieValue)
+    } catch {
+      // Si no se puede decodificar, usar el valor original
+    }
+
+    const user = JSON.parse(cookieValue)
     return user || null
-  } catch {
+  } catch (error) {
+    console.error("[v0] Error getting authenticated user:", error)
     return null
   }
 }
