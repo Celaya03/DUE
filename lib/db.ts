@@ -115,7 +115,6 @@ function mapTransactionRow(row: any): Transaction {
 export async function getAppData(userId: string): Promise<DbData> {
   const pool = getPool()
   await ensureTables()
-  await seedDataIfEmpty(userId)
 
   const tasksResult = await pool.query(
     "SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC",
@@ -126,6 +125,28 @@ export async function getAppData(userId: string): Promise<DbData> {
     "SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC",
     [userId]
   )
+
+  // Si el usuario no tiene datos, inicializa con datos por defecto
+  if (tasksResult.rows.length === 0 && habitsResult.rows.length === 0 && transactionsResult.rows.length === 0) {
+    await seedDataIfEmpty(userId)
+    
+    // Vuelve a traer los datos iniciales
+    const retryTasks = await pool.query(
+      "SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC",
+      [userId]
+    )
+    const retryHabits = await pool.query("SELECT * FROM habits WHERE user_id = $1", [userId])
+    const retryTransactions = await pool.query(
+      "SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC",
+      [userId]
+    )
+    
+    return {
+      tasks: retryTasks.rows.map(mapTaskRow),
+      habits: retryHabits.rows.map(mapHabitRow),
+      transactions: retryTransactions.rows.map(mapTransactionRow),
+    }
+  }
 
   return {
     tasks: tasksResult.rows.map(mapTaskRow),
