@@ -89,6 +89,11 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
       [] as Array<{ date: string; balance: number; formattedDate: string }>
     )
 
+  const topExpenses = transactions
+    .filter((transaction) => transaction.type === "gasto")
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5)
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -163,29 +168,22 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
 
         <Card>
           <CardHeader>
-            <CardTitle>Gastos por categoría</CardTitle>
+            <CardTitle>Top Gastos</CardTitle>
           </CardHeader>
           <CardContent>
-            {transactions.filter((t) => t.type === "gasto").length === 0 ? (
-              <p className="text-sm text-muted-foreground">Registra gastos para ver el desglose.</p>
+            {topExpenses.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Agrega gastos para ver los montos más altos.</p>
             ) : (
-              <div className="space-y-2">
-                {Object.entries(
-                  transactions.reduce<Record<string, number>>((acc, transaction) => {
-                    if (transaction.type === "gasto") {
-                      acc[transaction.category] = (acc[transaction.category] || 0) + transaction.amount
-                    }
-                    return acc
-                  }, {})
-                )
-                  .sort(([, a], [, b]) => b - a)
-                  .slice(0, 5)
-                  .map(([category, amount]) => (
-                    <div key={category} className="flex items-center justify-between">
-                      <span className="text-sm text-foreground">{category}</span>
-                      <span className="text-sm font-semibold">${amount.toLocaleString()}</span>
+              <div className="space-y-3">
+                {topExpenses.map((expense) => (
+                  <div key={expense.id} className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/50 p-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{expense.description}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(expense.date).toLocaleDateString("es-ES")}</p>
                     </div>
-                  ))}
+                    <span className="text-sm font-semibold text-destructive">-${expense.amount.toLocaleString()}</span>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

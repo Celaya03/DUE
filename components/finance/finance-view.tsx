@@ -135,17 +135,6 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
     onTransactionsChange(transactions.filter((t) => t.id !== id))
   }
 
-  const groupedByCategory = transactions
-    .filter((t) => t.type === "gasto")
-    .reduce(
-      (acc, t) => {
-        acc[t.category] = (acc[t.category] || 0) + t.amount
-        return acc
-      },
-      {} as Record<string, number>
-    )
-
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -332,31 +321,6 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Gastos por categoría</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {Object.keys(groupedByCategory).length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              Registra gastos para ver el desglose.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {Object.entries(groupedByCategory)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 5)
-                .map(([category, amount]) => (
-                  <div key={category} className="flex items-center justify-between">
-                    <span className="text-sm text-foreground">{category}</span>
-                    <span className="text-sm font-semibold">${amount.toLocaleString()}</span>
-                  </div>
-                ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Transactions */}
         <Card className="lg:col-span-2">
@@ -434,27 +398,6 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
           </CardContent>
         </Card>
 
-        {/* Expenses by Category */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Top Gastos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Object.keys(groupedByCategory).length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">Sin gastos registrados</p>
-            ) : (
-              Object.entries(groupedByCategory)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 5)
-                .map(([category, amount]) => (
-                  <div key={category} className="flex items-center justify-between">
-                    <span className="text-sm text-foreground">{category}</span>
-                    <Badge variant="outline">${amount.toLocaleString()}</Badge>
-                  </div>
-                ))
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

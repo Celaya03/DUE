@@ -8,7 +8,6 @@ import { HabitsView } from "./habits/habits-view"
 import { FinanceView } from "./finance/finance-view"
 import type { Task, Habit, Transaction } from "@/lib/types"
 import { useAuth } from "@/lib/auth-context"
-import { getUserStorageKeys, loadFromStorage, saveToStorage } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { toast } from "@/hooks/use-toast"
 
@@ -19,32 +18,61 @@ export function AppShell() {
   const [currentView, setCurrentView] = useState<View>("dashboard")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [reminderSent, setReminderSent] = useState(false)
-  const storageKeys = user ? getUserStorageKeys(user.id) : null
+  const [dataLoaded, setDataLoaded] = useState(false)
 
-  const [tasks, setTasks] = useState<Task[]>(() =>
-    storageKeys ? loadFromStorage(storageKeys.tasks, []) : []
-  )
-  const [habits, setHabits] = useState<Habit[]>(() =>
-    storageKeys ? loadFromStorage(storageKeys.habits, []) : []
-  )
-  const [transactions, setTransactions] = useState<Transaction[]>(() =>
-    storageKeys ? loadFromStorage(storageKeys.transactions, []) : []
-  )
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [habits, setHabits] = useState<Habit[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
 
   useEffect(() => {
-    if (!storageKeys) return
-    saveToStorage(storageKeys.tasks, tasks)
-  }, [storageKeys, tasks])
+    if (!user) return
+
+    let active = true
+
+    const loadData = async () => {
+      try {
+        const response = await fetch("/api/data")
+        if (!response.ok) return
+        const data = (await response.json()) as {
+          tasks: Task[]
+          habits: Habit[]
+          transactions: Transaction[]
+        }
+
+        if (!active) return
+        setTasks(data.tasks ?? [])
+        setHabits(data.habits ?? [])
+        setTransactions(data.transactions ?? [])
+      } catch (error) {
+        console.error("Error loading app data:", error)
+      } finally {
+        if (active) setDataLoaded(true)
+      }
+    }
+
+    loadData()
+    return () => {
+      active = false
+    }
+  }, [user])
 
   useEffect(() => {
-    if (!storageKeys) return
-    saveToStorage(storageKeys.habits, habits)
-  }, [storageKeys, habits])
+    if (!user || !dataLoaded) return
 
-  useEffect(() => {
-    if (!storageKeys) return
-    saveToStorage(storageKeys.transactions, transactions)
-  }, [storageKeys, transactions])
+    const saveData = async () => {
+      try {
+        await fetch("/api/data", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tasks, habits, transactions }),
+        })
+      } catch (error) {
+        console.error("Error saving app data:", error)
+      }
+    }
+
+    saveData()
+  }, [user, dataLoaded, tasks, habits, transactions])
 
   useEffect(() => {
     if (reminderSent || !tasks.length) return
@@ -73,7 +101,7 @@ export function AppShell() {
     }
   }, [reminderSent, tasks])
 
-  if (!user || !storageKeys) {
+  if (!user) {
     return null
   }
 
