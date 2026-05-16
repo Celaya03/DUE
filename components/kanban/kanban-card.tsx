@@ -60,6 +60,8 @@ export function KanbanCard({ task, isDragging, isSelected, onToggleSelect, onDel
     <Card
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
       className={cn(
         "cursor-grab active:cursor-grabbing transition-all",
         isBeingDragged && "opacity-50 scale-105 shadow-xl rotate-2"
@@ -72,15 +74,12 @@ export function KanbanCard({ task, isDragging, isSelected, onToggleSelect, onDel
               checked={isSelected}
               onCheckedChange={() => onToggleSelect?.()}
               className="mt-1 border-2 border-border/80 shadow-sm"
+              onPointerDown={(event) => event.stopPropagation()}
             />
           )}
-          <button
-            {...attributes}
-            {...listeners}
-            className="mt-0.5 text-muted-foreground hover:text-foreground cursor-grab"
-          >
+          <div className="mt-0.5 text-muted-foreground hover:text-foreground pointer-events-none">
             <GripVertical className="h-4 w-4" />
-          </button>
+          </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
