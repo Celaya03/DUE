@@ -1,4 +1,4 @@
-import { Pool } from "pg"
+import { Pool, type PoolConfig } from "pg"
 import type { Task, Habit, Transaction } from "./types"
 import { initialHabits, initialTasks, initialTransactions } from "./store"
 
@@ -13,7 +13,13 @@ if (!connectionString) {
   throw new Error("Missing DATABASE_URL environment variable. Configure DATABASE_URL with your managed database credentials.")
 }
 
-const pool = new Pool({ connectionString })
+const poolConfig: PoolConfig = { connectionString }
+
+if (connectionString.includes("supabase.co")) {
+  poolConfig.ssl = { rejectUnauthorized: false }
+}
+
+const pool = new Pool(poolConfig)
 
 async function ensureTables() {
   await pool.query(`
