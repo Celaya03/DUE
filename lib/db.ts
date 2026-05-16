@@ -1,6 +1,7 @@
 import { Pool, type PoolConfig } from "pg"
 import type { Task, Habit, Transaction } from "./types"
 import { initialHabits, initialTasks, initialTransactions } from "./store"
+import { randomUUID } from "crypto"
 
 type DbData = {
   tasks: Task[]
@@ -22,39 +23,43 @@ if (connectionString.includes("supabase.co")) {
 const pool = new Pool(poolConfig)
 
 async function ensureTables() {
+  // Use composite primary key (id, user_id) to ensure data isolation per user
   await pool.query(`
     CREATE TABLE IF NOT EXISTS tasks (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       user_id TEXT NOT NULL,
       title TEXT NOT NULL,
       description TEXT,
       status TEXT NOT NULL,
       priority TEXT NOT NULL,
       due_date TEXT,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (id, user_id)
     )
   `)
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS habits (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       user_id TEXT NOT NULL,
       name TEXT NOT NULL,
       completed BOOLEAN NOT NULL,
       streak INTEGER NOT NULL,
-      icon TEXT NOT NULL
+      icon TEXT NOT NULL,
+      PRIMARY KEY (id, user_id)
     )
   `)
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS transactions (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       user_id TEXT NOT NULL,
       description TEXT NOT NULL,
       amount NUMERIC NOT NULL,
       type TEXT NOT NULL,
       date TEXT NOT NULL,
-      category TEXT NOT NULL
+      category TEXT NOT NULL,
+      PRIMARY KEY (id, user_id)
     )
   `)
 }
@@ -62,10 +67,24 @@ async function ensureTables() {
 async function seedDataIfEmpty(userId: string) {
   const result = await pool.query("SELECT COUNT(*)::int AS count FROM tasks WHERE user_id = $1", [userId])
   if (result.rows[0]?.count === 0) {
+    // Generate unique IDs for this user's initial data to avoid conflicts
+    const tasksWithUniqueIds = initialTasks.map((task) => ({
+      ...task,
+      id: randomUUID(),
+    }))
+    const habitsWithUniqueIds = initialHabits.map((habit) => ({
+      ...habit,
+      id: randomUUID(),
+    }))
+    const transactionsWithUniqueIds = initialTransactions.map((transaction) => ({
+      ...transaction,
+      id: randomUUID(),
+    }))
+    
     await saveAppData(userId, {
-      tasks: initialTasks,
-      habits: initialHabits,
-      transactions: initialTransactions,
+      tasks: tasksWithUniqueIds,
+      habits: habitsWithUniqueIds,
+      transactions: transactionsWithUniqueIds,
     })
   }
 }
