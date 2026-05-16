@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatCard } from "./stat-card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
 import type { Task, Habit, Transaction } from "@/lib/types"
+import * as Recharts from "recharts"
 import {
   ListTodo,
   Clock,
@@ -57,6 +59,35 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
     .filter((t) => t.status !== "completado" && t.priority === "alta")
     .slice(0, 3)
 
+  const cashFlowData = Object.values(
+    transactions
+      .slice()
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .reduce<Record<string, { date: string; amount: number }>>((acc, transaction) => {
+        const date = transaction.date
+        if (!acc[date]) {
+          acc[date] = { date, amount: 0 }
+        }
+        acc[date].amount += transaction.type === "ingreso" ? transaction.amount : -transaction.amount
+        return acc
+      }, {})
+  )
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .reduce(
+      (acc, current) => {
+        const previousBalance = acc.length > 0 ? acc[acc.length - 1].balance : 0
+        acc.push({
+          date: current.date,
+          balance: previousBalance + current.amount,
+          formattedDate: new Date(current.date).toLocaleDateString("es-ES", {
+            day: "numeric",
+            month: "short",
+          }),
+        })
+        return acc
+      },
+      [] as Array<{ date: string; balance: number; formattedDate: string }>
+    )
 
   return (
     <div className="space-y-6">
@@ -67,7 +98,7 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <StatCard
           title="Tareas Pendientes"
           value={pendingTasks}
@@ -82,6 +113,12 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
           variant="warning"
         />
         <StatCard
+          title="Saldo Actual"
+          value={`$${balance.toLocaleString()}`}
+          icon={Wallet}
+          variant={balance >= 0 ? "success" : "destructive"}
+        />
+        <StatCard
           title="Hábitos Completados"
           value={habits.length > 0 ? `${completedHabits}/${habits.length}` : "0/0"}
           subtitle={
@@ -91,13 +128,6 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
           }
           icon={Target}
           variant="success"
-        />
-        <StatCard
-          title="Saldo Actual"
-          value={`$${balance.toLocaleString()}`}
-          icon={Wallet}
-          trend={{ value: 12, isPositive: balance > 0 }}
-          variant={balance >= 0 ? "success" : "destructive"}
         />
         <StatCard
           title="Productividad"
@@ -240,7 +270,7 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
       </div>
 
       {/* Finance Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center gap-2">
             <TrendingUp className="h-5 w-5 text-success" />
@@ -261,6 +291,32 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Flujo de caja</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {cashFlowData.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              Registra transacciones para ver el flujo de caja.
+            </p>
+          ) : (
+            <ChartContainer
+              id="dashboard-cash-flow"
+              config={{ balance: { label: "Balance", color: "#0ea5e9" } }}
+            >
+              <Recharts.LineChart data={cashFlowData} margin={{ top: 10, right: 15, left: 0, bottom: 0 }}>
+                <Recharts.CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <Recharts.XAxis dataKey="formattedDate" stroke="var(--muted-foreground)" />
+                <Recharts.YAxis stroke="var(--muted-foreground)" />
+                <ChartTooltip />
+                <Recharts.Line type="monotone" dataKey="balance" stroke="#0ea5e9" strokeWidth={3} dot={false} />
+              </Recharts.LineChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

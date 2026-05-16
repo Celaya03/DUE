@@ -68,14 +68,11 @@ export function KanbanCard({ task, isDragging, isSelected, onToggleSelect, onDel
       <CardContent className="p-3">
         <div className="flex items-start gap-2">
           {onToggleSelect && (
-            <label className="flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/80 w-full">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={onToggleSelect}
-                className="mt-0.5"
-              />
-              <span className="text-sm text-foreground">Seleccionar</span>
-            </label>
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect?.()}
+              className="mt-1"
+            />
           )}
           <button
             {...attributes}
