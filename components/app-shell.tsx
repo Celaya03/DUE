@@ -18,7 +18,9 @@ export function AppShell() {
   const [currentView, setCurrentView] = useState<View>("dashboard")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [reminderSent, setReminderSent] = useState(false)
+
   const [dataLoaded, setDataLoaded] = useState(false)
+  const [initialized, setInitialized] = useState(false)
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [habits, setHabits] = useState<Habit[]>([])
@@ -32,7 +34,12 @@ export function AppShell() {
     const loadData = async () => {
       try {
         const response = await fetch(`/api/data`)
-        if (!response.ok) return
+
+        if (!response.ok) {
+          console.error("Failed to load data")
+          return
+        }
+
         const data = (await response.json()) as {
           tasks: Task[]
           habits: Habit[]
@@ -40,31 +47,42 @@ export function AppShell() {
         }
 
         if (!active) return
+
         setTasks(data.tasks ?? [])
         setHabits(data.habits ?? [])
         setTransactions(data.transactions ?? [])
       } catch (error) {
         console.error("Error loading app data:", error)
       } finally {
-        if (active) setDataLoaded(true)
+        if (active) {
+          setDataLoaded(true)
+          setInitialized(true)
+        }
       }
     }
 
     loadData()
+
     return () => {
       active = false
     }
   }, [user])
 
   useEffect(() => {
-    if (!user || !dataLoaded) return
+    if (!user || !dataLoaded || !initialized) return
 
     const saveData = async () => {
       try {
         await fetch(`/api/data`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tasks, habits, transactions }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            tasks,
+            habits,
+            transactions,
+          }),
         })
       } catch (error) {
         console.error("Error saving app data:", error)
@@ -72,14 +90,18 @@ export function AppShell() {
     }
 
     saveData()
-  }, [user, dataLoaded, tasks, habits, transactions])
+  }, [user, dataLoaded, initialized, tasks, habits, transactions])
 
   useEffect(() => {
     if (reminderSent || !tasks.length) return
 
     const today = new Date().toISOString().split("T")[0]
+
     const dueTasks = tasks.filter(
-      (task) => task.dueDate && task.dueDate <= today && task.status !== "completado"
+      (task) =>
+        task.dueDate &&
+        task.dueDate <= today &&
+        task.status !== "completado"
     )
 
     if (dueTasks.length > 0) {
@@ -87,16 +109,21 @@ export function AppShell() {
         title: "Recordatorio de tareas",
         description: `Tienes ${dueTasks.length} tarea(s) con fecha de hoy o atrasadas.`,
       })
+
       setReminderSent(true)
       return
     }
 
-    const pendingCount = tasks.filter((task) => task.status === "pendiente").length
+    const pendingCount = tasks.filter(
+      (task) => task.status === "pendiente"
+    ).length
+
     if (pendingCount > 0) {
       toast({
         title: "Tareas pendientes",
         description: `Aún tienes ${pendingCount} tareas pendientes. Organiza tu día.`,
       })
+
       setReminderSent(true)
     }
   }, [reminderSent, tasks])
@@ -116,14 +143,31 @@ export function AppShell() {
             transactions={transactions}
           />
         )
+
       case "kanban":
-        return <KanbanBoard tasks={tasks} onTasksChange={setTasks} />
+        return (
+          <KanbanBoard
+            tasks={tasks}
+            onTasksChange={setTasks}
+          />
+        )
+
       case "habits":
-        return <HabitsView habits={habits} onHabitsChange={setHabits} />
+        return (
+          <HabitsView
+            habits={habits}
+            onHabitsChange={setHabits}
+          />
+        )
+
       case "finance":
         return (
-          <FinanceView transactions={transactions} onTransactionsChange={setTransactions} />
+          <FinanceView
+            transactions={transactions}
+            onTransactionsChange={setTransactions}
+          />
         )
+
       default:
         return null
     }
@@ -137,13 +181,16 @@ export function AppShell() {
         collapsed={sidebarCollapsed}
         onCollapsedChange={setSidebarCollapsed}
       />
+
       <main
         className={cn(
           "transition-all duration-300 min-h-screen",
           sidebarCollapsed ? "ml-16" : "ml-64"
         )}
       >
-        <div className="p-6 max-w-7xl mx-auto">{renderView()}</div>
+        <div className="p-6 max-w-7xl mx-auto">
+          {renderView()}
+        </div>
       </main>
     </div>
   )
