@@ -25,6 +25,7 @@ async function ensureTables() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       title TEXT NOT NULL,
       description TEXT,
       status TEXT NOT NULL,
@@ -37,6 +38,7 @@ async function ensureTables() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS habits (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       name TEXT NOT NULL,
       completed BOOLEAN NOT NULL,
       streak INTEGER NOT NULL,
@@ -47,6 +49,7 @@ async function ensureTables() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS transactions (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       description TEXT NOT NULL,
       amount NUMERIC NOT NULL,
       type TEXT NOT NULL,
@@ -56,10 +59,10 @@ async function ensureTables() {
   `)
 }
 
-async function seedDataIfEmpty() {
-  const result = await pool.query("SELECT COUNT(*)::int AS count FROM tasks")
+async function seedDataIfEmpty(userId: string) {
+  const result = await pool.query("SELECT COUNT(*)::int AS count FROM tasks WHERE user_id = $1", [userId])
   if (result.rows[0]?.count === 0) {
-    await saveAppData({
+    await saveAppData(userId, {
       tasks: initialTasks,
       habits: initialHabits,
       transactions: initialTransactions,
@@ -100,13 +103,19 @@ function mapTransactionRow(row: any): Transaction {
   }
 }
 
-export async function getAppData(): Promise<DbData> {
+export async function getAppData(userId: string): Promise<DbData> {
   await ensureTables()
-  await seedDataIfEmpty()
+  await seedDataIfEmpty(userId)
 
-  const tasksResult = await pool.query("SELECT * FROM tasks ORDER BY created_at DESC")
-  const habitsResult = await pool.query("SELECT * FROM habits")
-  const transactionsResult = await pool.query("SELECT * FROM transactions ORDER BY date DESC")
+  const tasksResult = await pool.query(
+    "SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC",
+    [userId]
+  )
+  const habitsResult = await pool.query("SELECT * FROM habits WHERE user_id = $1", [userId])
+  const transactionsResult = await pool.query(
+    "SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC",
+    [userId]
+  )
 
   return {
     tasks: tasksResult.rows.map(mapTaskRow),
@@ -115,34 +124,34 @@ export async function getAppData(): Promise<DbData> {
   }
 }
 
-export async function saveAppData(data: DbData): Promise<void> {
+export async function saveAppData(userId: string, data: DbData): Promise<void> {
   await ensureTables()
 
   const client = await pool.connect()
   try {
     await client.query("BEGIN")
-    await client.query("DELETE FROM tasks")
-    await client.query("DELETE FROM habits")
-    await client.query("DELETE FROM transactions")
+    await client.query("DELETE FROM tasks WHERE user_id = $1", [userId])
+    await client.query("DELETE FROM habits WHERE user_id = $1", [userId])
+    await client.query("DELETE FROM transactions WHERE user_id = $1", [userId])
 
     for (const task of data.tasks) {
       await client.query(
-        `INSERT INTO tasks (id, title, description, status, priority, due_date, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [task.id, task.title, task.description ?? null, task.status, task.priority, task.dueDate ?? null, task.createdAt]
+        `INSERT INTO tasks (id, user_id, title, description, status, priority, due_date, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [task.id, userId, task.title, task.description ?? null, task.status, task.priority, task.dueDate ?? null, task.createdAt]
       )
     }
 
     for (const habit of data.habits) {
       await client.query(
-        `INSERT INTO habits (id, name, completed, streak, icon) VALUES ($1, $2, $3, $4, $5)`,
-        [habit.id, habit.name, habit.completed, habit.streak, habit.icon]
+        `INSERT INTO habits (id, user_id, name, completed, streak, icon) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [habit.id, userId, habit.name, habit.completed, habit.streak, habit.icon]
       )
     }
 
     for (const transaction of data.transactions) {
       await client.query(
-        `INSERT INTO transactions (id, description, amount, type, date, category) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [transaction.id, transaction.description, transaction.amount, transaction.type, transaction.date, transaction.category]
+        `INSERT INTO transactions (id, user_id, description, amount, type, date, category) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [transaction.id, userId, transaction.description, transaction.amount, transaction.type, transaction.date, transaction.category]
       )
     }
 
