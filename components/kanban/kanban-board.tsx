@@ -256,7 +256,22 @@ export function KanbanBoard({ tasks, onTasksChange }: KanbanBoardProps) {
         </div>
 
         <DragOverlay>
-          {activeTask && <KanbanCard task={activeTask} isDragging />}
+          {activeTask ? (
+            selectedTasks.has(activeTask.id) && selectedTasks.size > 1 ? (
+              <div className="space-y-2">
+                <div className="h-10 rounded-2xl bg-muted/80 shadow-sm" />
+                <div className="h-10 rounded-2xl bg-muted/80 shadow-sm ml-4" />
+                <div className="rounded-2xl border border-border/80 bg-background shadow-lg">
+                  <div className="p-3">
+                    <p className="text-sm font-semibold text-foreground">{selectedTasks.size} tareas seleccionadas</p>
+                    <p className="text-xs text-muted-foreground mt-1">Todas se moverán juntas al soltar.</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <KanbanCard task={activeTask} isDragging />
+            )
+          ) : null}
         </DragOverlay>
       </DndContext>
 
