@@ -8,20 +8,28 @@ type DbData = {
   transactions: Transaction[]
 }
 
-const connectionString = process.env.DATABASE_URL
-if (!connectionString) {
-  throw new Error("Missing DATABASE_URL environment variable. Configure DATABASE_URL with your managed database credentials.")
+let pool: Pool | null = null
+
+function getPool(): Pool {
+  if (!pool) {
+    const connectionString = process.env.DATABASE_URL
+    if (!connectionString) {
+      throw new Error("Missing DATABASE_URL environment variable. Configure DATABASE_URL with your managed database credentials.")
+    }
+
+    const poolConfig: PoolConfig = { connectionString }
+
+    if (connectionString.includes("supabase.co")) {
+      poolConfig.ssl = { rejectUnauthorized: false }
+    }
+
+    pool = new Pool(poolConfig)
+  }
+  return pool
 }
-
-const poolConfig: PoolConfig = { connectionString }
-
-if (connectionString.includes("supabase.co")) {
-  poolConfig.ssl = { rejectUnauthorized: false }
-}
-
-const pool = new Pool(poolConfig)
 
 async function ensureTables() {
+  const pool = getPool()
   await pool.query(`
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
@@ -60,6 +68,7 @@ async function ensureTables() {
 }
 
 async function seedDataIfEmpty(userId: string) {
+  const pool = getPool()
   const result = await pool.query("SELECT COUNT(*)::int AS count FROM tasks WHERE user_id = $1", [userId])
   if (result.rows[0]?.count === 0) {
     // await saveAppData(userId, {
@@ -104,6 +113,7 @@ function mapTransactionRow(row: any): Transaction {
 }
 
 export async function getAppData(userId: string): Promise<DbData> {
+  const pool = getPool()
   await ensureTables()
   await seedDataIfEmpty(userId)
 
@@ -125,6 +135,7 @@ export async function getAppData(userId: string): Promise<DbData> {
 }
 
 export async function saveAppData(userId: string, data: DbData): Promise<void> {
+  const pool = getPool()
   await ensureTables()
 
   const client = await pool.connect()
