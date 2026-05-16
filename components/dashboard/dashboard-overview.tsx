@@ -296,24 +296,27 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
         <CardHeader>
           <CardTitle>Flujo de caja</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
           {cashFlowData.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
               Registra transacciones para ver el flujo de caja.
             </p>
           ) : (
-            <ChartContainer
-              id="dashboard-cash-flow"
-              config={{ balance: { label: "Balance", color: "#0ea5e9" } }}
-            >
-              <Recharts.LineChart data={cashFlowData} margin={{ top: 10, right: 15, left: 0, bottom: 0 }}>
-                <Recharts.CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <Recharts.XAxis dataKey="formattedDate" stroke="var(--muted-foreground)" />
-                <Recharts.YAxis stroke="var(--muted-foreground)" />
-                <ChartTooltip />
-                <Recharts.Line type="monotone" dataKey="balance" stroke="#0ea5e9" strokeWidth={3} dot={false} />
-              </Recharts.LineChart>
-            </ChartContainer>
+            <div className="h-56">
+              <ChartContainer
+                id="dashboard-cash-flow"
+                className="h-full"
+                config={{ balance: { label: "Balance", color: "#0ea5e9" } }}
+              >
+                <Recharts.LineChart data={cashFlowData} margin={{ top: 8, right: 10, left: 0, bottom: 0 }}>
+                  <Recharts.CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <Recharts.XAxis dataKey="formattedDate" stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
+                  <Recharts.YAxis stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
+                  <ChartTooltip />
+                  <Recharts.Line type="monotone" dataKey="balance" stroke="#0ea5e9" strokeWidth={3} dot={false} />
+                </Recharts.LineChart>
+              </ChartContainer>
+            </div>
           )}
         </CardContent>
       </Card>

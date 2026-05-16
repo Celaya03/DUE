@@ -71,7 +71,7 @@ export function KanbanCard({ task, isDragging, isSelected, onToggleSelect, onDel
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => onToggleSelect?.()}
-              className="mt-1"
+              className="mt-1 border-2 border-border/80 shadow-sm"
             />
           )}
           <button
