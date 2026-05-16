@@ -1,38 +1,70 @@
 import { NextResponse } from "next/server"
-import { loginUser } from "@/lib/auth-utils"
+import { getAppData, saveAppData } from "@/lib/db"
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   try {
-    const { email, password } = await request.json()
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId")
 
-    if (!email || !password) {
+    if (!userId) {
       return NextResponse.json(
-        { error: "Email y contraseña requeridos" },
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      )
+    }
+
+    const data = await getAppData(userId)
+
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error("GET /api/data error:", error)
+
+    return NextResponse.json(
+      { error: "Error cargando datos" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId")
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Usuario no autenticado" },
+        { status: 401 }
+      )
+    }
+
+    const payload = await request.json()
+
+    if (
+      !payload ||
+      !Array.isArray(payload.tasks) ||
+      !Array.isArray(payload.habits) ||
+      !Array.isArray(payload.transactions)
+    ) {
+      return NextResponse.json(
+        { error: "Payload inválido" },
         { status: 400 }
       )
     }
 
-    const user = await loginUser(email, password)
-
-    // Crear cookie de sesión segura (HTTP-only)
-    const response = NextResponse.json(
-      { user, message: "Login exitoso" },
-      { status: 200 }
-    )
-
-    // Guardar sesión en cookie HTTP-only
-    response.cookies.set("due_auth_session", JSON.stringify(user), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 días
+    await saveAppData(userId, {
+      tasks: payload.tasks,
+      habits: payload.habits,
+      transactions: payload.transactions,
     })
 
-    return response
-  } catch (error: any) {
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("PUT /api/data error:", error)
+
     return NextResponse.json(
-      { error: error.message || "Error en el login" },
-      { status: 401 }
+      { error: "Error guardando datos" },
+      { status: 500 }
     )
   }
 }

@@ -33,7 +33,7 @@ export function AppShell() {
 
     const loadData = async () => {
       try {
-        const response = await fetch(`/api/data`)
+        const response = await fetch(`/api/data?userId=${user.id}`)
 
         if (!response.ok) {
           console.error("Failed to load data")
@@ -73,7 +73,7 @@ export function AppShell() {
 
     const saveData = async () => {
       try {
-        await fetch(`/api/data`, {
+        await fetch(`/api/data?userId=${user.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
