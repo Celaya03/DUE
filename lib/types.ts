@@ -30,6 +30,12 @@ export interface Transaction {
 
 export interface User {
   id: string
-  name: string
   email: string
+  name?: string
+}
+
+export type Profile = {
+  id: string
+  user_id: string
+  name: string
 }

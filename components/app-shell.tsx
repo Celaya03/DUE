@@ -8,100 +8,42 @@ import { HabitsView } from "./habits/habits-view"
 import { FinanceView } from "./finance/finance-view"
 import type { Task, Habit, Transaction } from "@/lib/types"
 import { useAuth } from "@/lib/auth-context"
+import { getUserStorageKeys, loadFromStorage, saveToStorage } from "@/lib/store"
 import { cn } from "@/lib/utils"
-import { toast } from "@/hooks/use-toast"
 
 type View = "dashboard" | "kanban" | "finance" | "habits"
 
 export function AppShell() {
   const { user } = useAuth()
   const [currentView, setCurrentView] = useState<View>("dashboard")
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [reminderSent, setReminderSent] = useState(false)
-  const [dataLoaded, setDataLoaded] = useState(false)
+  const storageKeys = user ? getUserStorageKeys(user.id) : null
 
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [habits, setHabits] = useState<Habit[]>([])
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-
-  useEffect(() => {
-    if (!user) return
-
-    let active = true
-
-    const loadData = async () => {
-      try {
-        const response = await fetch(`/api/data?userId=${encodeURIComponent(user.id)}`)
-        if (!response.ok) return
-        const data = (await response.json()) as {
-          tasks: Task[]
-          habits: Habit[]
-          transactions: Transaction[]
-        }
-
-        if (!active) return
-        setTasks(data.tasks ?? [])
-        setHabits(data.habits ?? [])
-        setTransactions(data.transactions ?? [])
-      } catch (error) {
-        console.error("Error loading app data:", error)
-      } finally {
-        if (active) setDataLoaded(true)
-      }
-    }
-
-    loadData()
-    return () => {
-      active = false
-    }
-  }, [user])
+  const [tasks, setTasks] = useState<Task[]>(() =>
+    storageKeys ? loadFromStorage(storageKeys.tasks, []) : []
+  )
+  const [habits, setHabits] = useState<Habit[]>(() =>
+    storageKeys ? loadFromStorage(storageKeys.habits, []) : []
+  )
+  const [transactions, setTransactions] = useState<Transaction[]>(() =>
+    storageKeys ? loadFromStorage(storageKeys.transactions, []) : []
+  )
 
   useEffect(() => {
-    if (!user || !dataLoaded) return
-
-    const saveData = async () => {
-      try {
-        await fetch(`/api/data?userId=${encodeURIComponent(user.id)}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: user.id, tasks, habits, transactions }),
-        })
-      } catch (error) {
-        console.error("Error saving app data:", error)
-      }
-    }
-
-    saveData()
-  }, [user, dataLoaded, tasks, habits, transactions])
+    if (!storageKeys) return
+    saveToStorage(storageKeys.tasks, tasks)
+  }, [storageKeys, tasks])
 
   useEffect(() => {
-    if (reminderSent || !tasks.length) return
+    if (!storageKeys) return
+    saveToStorage(storageKeys.habits, habits)
+  }, [storageKeys, habits])
 
-    const today = new Date().toISOString().split("T")[0]
-    const dueTasks = tasks.filter(
-      (task) => task.dueDate && task.dueDate <= today && task.status !== "completado"
-    )
+  useEffect(() => {
+    if (!storageKeys) return
+    saveToStorage(storageKeys.transactions, transactions)
+  }, [storageKeys, transactions])
 
-    if (dueTasks.length > 0) {
-      toast({
-        title: "Recordatorio de tareas",
-        description: `Tienes ${dueTasks.length} tarea(s) con fecha de hoy o atrasadas.`,
-      })
-      setReminderSent(true)
-      return
-    }
-
-    const pendingCount = tasks.filter((task) => task.status === "pendiente").length
-    if (pendingCount > 0) {
-      toast({
-        title: "Tareas pendientes",
-        description: `Aún tienes ${pendingCount} tareas pendientes. Organiza tu día.`,
-      })
-      setReminderSent(true)
-    }
-  }, [reminderSent, tasks])
-
-  if (!user) {
+  if (!user || !storageKeys) {
     return null
   }
 
@@ -109,12 +51,7 @@ export function AppShell() {
     switch (currentView) {
       case "dashboard":
         return (
-          <DashboardOverview
-            userName={user.name}
-            tasks={tasks}
-            habits={habits}
-            transactions={transactions}
-          />
+          <DashboardOverview tasks={tasks} habits={habits} transactions={transactions} />
         )
       case "kanban":
         return <KanbanBoard tasks={tasks} onTasksChange={setTasks} />

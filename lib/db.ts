@@ -1,6 +1,6 @@
 import { Pool, type PoolConfig } from "pg"
 import type { Task, Habit, Transaction } from "./types"
-import { initialHabits, initialTasks, initialTransactions } from "./store"
+// import { initialHabits, initialTasks, initialTransactions } from "./store"
 
 type DbData = {
   tasks: Task[]
@@ -62,11 +62,11 @@ async function ensureTables() {
 async function seedDataIfEmpty(userId: string) {
   const result = await pool.query("SELECT COUNT(*)::int AS count FROM tasks WHERE user_id = $1", [userId])
   if (result.rows[0]?.count === 0) {
-    await saveAppData(userId, {
-      tasks: initialTasks,
-      habits: initialHabits,
-      transactions: initialTransactions,
-    })
+    // await saveAppData(userId, {
+    //   tasks: initialTasks,
+    //   habits: initialHabits,
+    //   transactions: initialTransactions,
+    // })
   }
 }
 
