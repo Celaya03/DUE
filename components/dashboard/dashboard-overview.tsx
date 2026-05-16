@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatCard } from "./stat-card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { ChartContainer, ChartLegend, ChartTooltip } from "@/components/ui/chart"
 import type { Task, Habit, Transaction } from "@/lib/types"
 import {
   ListTodo,
@@ -20,7 +19,6 @@ import {
   Droplet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import * as Recharts from "recharts"
 
 interface DashboardOverviewProps {
   userName: string
@@ -59,86 +57,6 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
     .filter((t) => t.status !== "completado" && t.priority === "alta")
     .slice(0, 3)
 
-  const productivityTrend = Array.from({ length: 5 }, (_, index) => {
-    const date = new Date()
-    date.setDate(date.getDate() - (4 - index))
-    return {
-      name: date.toLocaleDateString("es-ES", { weekday: "short" }),
-      tareas: Math.round((completedTasks / 5) * (index + 1)),
-      habitos: Math.round((completedHabits / 5) * (index + 1)),
-    }
-  })
-
-  const taskStatusData = [
-    { name: "Pendientes", value: pendingTasks, color: "#f59e0b" },
-    { name: "En proceso", value: inProgressTasks, color: "#0ea5e9" },
-    { name: "Completadas", value: completedTasks, color: "#22c55e" },
-  ]
-
-  const expenseByCategory = Object.entries(
-    transactions.reduce<Record<string, number>>((acc, transaction) => {
-      if (transaction.type === "gasto") {
-        acc[transaction.category] = (acc[transaction.category] || 0) + transaction.amount
-      }
-      return acc
-    }, {}),
-  ).map(([category, amount]) => ({ category, amount }))
-
-  const topCategories = Object.entries(
-    transactions
-      .filter((t) => t.type === "gasto")
-      .reduce<Record<string, number>>((acc, t) => {
-        acc[t.category] = (acc[t.category] || 0) + t.amount
-        return acc
-      }, {})
-  )
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-
-  const cashFlowData = Object.values(
-    transactions
-      .slice()
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .reduce<Record<string, { date: string; income: number; expense: number }>>(
-        (acc, transaction) => {
-          const date = transaction.date
-          if (!acc[date]) {
-            acc[date] = { date, income: 0, expense: 0 }
-          }
-          if (transaction.type === "ingreso") {
-            acc[date].income += transaction.amount
-          } else {
-            acc[date].expense += transaction.amount
-          }
-          return acc
-        },
-        {}
-      )
-  )
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .reduce(
-      (acc, current) => {
-        const previousBalance = acc.length > 0 ? acc[acc.length - 1].balance : 0
-        acc.push({
-          ...current,
-          balance: previousBalance + current.income - current.expense,
-          formattedDate: new Date(current.date).toLocaleDateString("es-ES", {
-            day: "numeric",
-            month: "short",
-          }),
-        })
-        return acc
-      },
-      [] as Array<{
-        date: string
-        income: number
-        expense: number
-        balance: number
-        formattedDate: string
-      }>
-    )
-
-  const expenseColors = ["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308", "#ec4899"]
 
   return (
     <div className="space-y-6">
@@ -190,99 +108,25 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
         />
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>Rendimiento semanal</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              id="productivity-trend"
-              config={{
-                tareas: { label: "Tareas completadas", color: "#0ea5e9" },
-                habitos: { label: "Hábitos completados", color: "#22c55e" },
-              }}
-            >
-              <Recharts.LineChart
-                data={productivityTrend}
-                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-              >
-                <Recharts.CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <Recharts.XAxis dataKey="name" stroke="var(--muted-foreground)" />
-                <Recharts.YAxis stroke="var(--muted-foreground)" />
-                <ChartTooltip />
-                <ChartLegend />
-                <Recharts.Line
-                  type="monotone"
-                  dataKey="tareas"
-                  stroke="var(--color-tareas)"
-                  strokeWidth={3}
-                  dot
-                />
-                <Recharts.Line
-                  type="monotone"
-                  dataKey="habitos"
-                  stroke="var(--color-habitos)"
-                  strokeWidth={3}
-                  dot
-                />
-              </Recharts.LineChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Distribución de tareas</CardTitle>
+            <CardTitle>Resumen Financiero</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              id="task-status"
-              config={{
-                Pendientes: { label: "Pendientes", color: "#f59e0b" },
-                "En proceso": { label: "En proceso", color: "#0ea5e9" },
-                Completadas: { label: "Completadas", color: "#22c55e" },
-              }}
-            >
-              <Recharts.BarChart
-                data={taskStatusData}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-              >
-                <Recharts.CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <Recharts.XAxis dataKey="name" stroke="var(--muted-foreground)" />
-                <Recharts.YAxis stroke="var(--muted-foreground)" />
-                <ChartTooltip />
-                <Recharts.Bar dataKey="value">
-                  {taskStatusData.map((entry) => (
-                    <Recharts.Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Recharts.Bar>
-              </Recharts.BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <Card className="xl:col-span-2">
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle>Flujo de productividad</CardTitle>
-            <Badge variant="outline">Actualizado ahora</Badge>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Esta vista conecta tus tareas, hábitos y finanzas para generar un panorama claro de tu productividad.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="rounded-2xl border border-border/50 bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">Ingresos totales</p>
+                <p className="text-sm text-muted-foreground">Ingresos</p>
                 <p className="text-2xl font-bold text-success">${totalIncome.toLocaleString()}</p>
               </div>
               <div className="rounded-2xl border border-border/50 bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">Gastos totales</p>
+                <p className="text-sm text-muted-foreground">Gastos</p>
                 <p className="text-2xl font-bold text-destructive">-${totalExpenses.toLocaleString()}</p>
               </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-border/50 bg-muted/50 p-4">
+              <p className="text-sm text-muted-foreground">Balance</p>
+              <p className={cn("text-3xl font-bold", balance >= 0 ? "text-primary" : "text-destructive")}>${balance.toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -292,130 +136,27 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
             <CardTitle>Gastos por categoría</CardTitle>
           </CardHeader>
           <CardContent>
-            {expenseByCategory.length === 0 ? (
+            {transactions.filter((t) => t.type === "gasto").length === 0 ? (
               <p className="text-sm text-muted-foreground">Registra gastos para ver el desglose.</p>
             ) : (
-              <ChartContainer
-                id="expense-breakdown"
-                config={Object.fromEntries(
-                  expenseByCategory.map((item) => [
-                    item.category,
-                    { label: item.category, color: "#0ea5e9" },
-                  ]),
-                )}
-              >
-                <Recharts.PieChart>
-                  <Recharts.Pie
-                    data={expenseByCategory}
-                    dataKey="amount"
-                    nameKey="category"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={4}
-                  >
-                    {expenseByCategory.map((entry, index) => (
-                      <Recharts.Cell
-                        key={entry.category}
-                        fill={expenseColors[index % expenseColors.length]}
-                      />
-                    ))}
-                  </Recharts.Pie>
-                  <ChartTooltip />
-                  <ChartLegend />
-                </Recharts.PieChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Financial Charts */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Flujo de Caja</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {cashFlowData.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Registra transacciones para ver el flujo de caja.
-              </p>
-            ) : (
-              <ChartContainer
-                id="dashboard-cash-flow"
-                config={{
-                  balance: { label: "Balance", color: "#0ea5e9" },
-                }}
-              >
-                <Recharts.LineChart
-                  data={cashFlowData}
-                  margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-                >
-                  <Recharts.CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <Recharts.XAxis dataKey="formattedDate" stroke="var(--muted-foreground)" />
-                  <Recharts.YAxis stroke="var(--muted-foreground)" />
-                  <ChartTooltip />
-                  <Recharts.Line
-                    type="monotone"
-                    dataKey="balance"
-                    stroke="#0ea5e9"
-                    strokeWidth={3}
-                    dot
-                  />
-                </Recharts.LineChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Top 5 Gastos por Categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {topCategories.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Registra tus gastos para ver esta gráfica.
-              </p>
-            ) : (
-              <ChartContainer
-                id="dashboard-top-categories"
-                config={Object.fromEntries(
-                  topCategories.map(([category], index) => [
-                    category,
-                    {
-                      label: category,
-                      color: ["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308"][
-                        index % 5
-                      ],
-                    },
-                  ]),
-                )}
-              >
-                <Recharts.PieChart>
-                  <Recharts.Pie
-                    data={topCategories.map(([category, amount]) => ({
-                      category,
-                      amount,
-                    }))}
-                    dataKey="amount"
-                    nameKey="category"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={4}
-                  >
-                    {topCategories.map(([, ], index) => (
-                      <Recharts.Cell
-                        key={index}
-                        fill={["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308"][
-                          index % 5
-                        ]}
-                      />
-                    ))}
-                  </Recharts.Pie>
-                  <ChartTooltip />
-                </Recharts.PieChart>
-              </ChartContainer>
+              <div className="space-y-2">
+                {Object.entries(
+                  transactions.reduce<Record<string, number>>((acc, transaction) => {
+                    if (transaction.type === "gasto") {
+                      acc[transaction.category] = (acc[transaction.category] || 0) + transaction.amount
+                    }
+                    return acc
+                  }, {})
+                )
+                  .sort(([, a], [, b]) => b - a)
+                  .slice(0, 5)
+                  .map(([category, amount]) => (
+                    <div key={category} className="flex items-center justify-between">
+                      <span className="text-sm text-foreground">{category}</span>
+                      <span className="text-sm font-semibold">${amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -507,17 +248,6 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-success">${totalIncome.toLocaleString()}</p>
-            <div className="mt-4 space-y-2">
-              {transactions
-                .filter((t) => t.type === "ingreso")
-                .slice(0, 3)
-                .map((t) => (
-                  <div key={t.id} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t.description}</span>
-                    <span className="text-success">+${t.amount}</span>
-                  </div>
-                ))}
-            </div>
           </CardContent>
         </Card>
 
@@ -528,17 +258,6 @@ export function DashboardOverview({ userName, tasks, habits, transactions }: Das
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-destructive">${totalExpenses.toLocaleString()}</p>
-            <div className="mt-4 space-y-2">
-              {transactions
-                .filter((t) => t.type === "gasto")
-                .slice(0, 3)
-                .map((t) => (
-                  <div key={t.id} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t.description}</span>
-                    <span className="text-destructive">-${t.amount}</span>
-                  </div>
-                ))}
-            </div>
           </CardContent>
         </Card>
       </div>

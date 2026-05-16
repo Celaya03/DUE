@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
 import {
   Select,
   SelectContent,
@@ -29,7 +28,6 @@ import {
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
 import { DatePicker } from "@/components/ui/date-picker"
 import type { Transaction } from "@/lib/types"
-import * as Recharts from "recharts"
 import {
   Plus,
   TrendingUp,
@@ -147,59 +145,6 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
       {} as Record<string, number>
     )
 
-  const topCategories = Object.entries(groupedByCategory)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .reduce(
-      (acc, [category, amount]) => {
-        acc[category] = amount
-        return acc
-      },
-      {} as Record<string, number>
-    )
-
-  const cashFlowData = Object.values(
-    transactions
-      .slice()
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .reduce<Record<string, { date: string; income: number; expense: number }>>(
-        (acc, transaction) => {
-          const date = transaction.date
-          if (!acc[date]) {
-            acc[date] = { date, income: 0, expense: 0 }
-          }
-          if (transaction.type === "ingreso") {
-            acc[date].income += transaction.amount
-          } else {
-            acc[date].expense += transaction.amount
-          }
-          return acc
-        },
-        {}
-      )
-  )
-  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  .reduce(
-    (acc, current) => {
-      const previousBalance = acc.length > 0 ? acc[acc.length - 1].balance : 0
-      acc.push({
-        ...current,
-        balance: previousBalance + current.income - current.expense,
-        formattedDate: new Date(current.date).toLocaleDateString("es-ES", {
-          day: "numeric",
-          month: "short",
-        }),
-      })
-      return acc
-    },
-    [] as Array<{
-      date: string
-      income: number
-      expense: number
-      balance: number
-      formattedDate: string
-    }>
-  )
 
   return (
     <div className="space-y-6">
@@ -387,96 +332,30 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Top 5 Gastos por Categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {Object.keys(topCategories).length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Registra tus gastos para ver esta gráfica.
-              </p>
-            ) : (
-              <ChartContainer
-                id="finance-expense-category"
-                config={Object.fromEntries(
-                  Object.keys(topCategories).map((category, index) => [
-                    category,
-                    {
-                      label: category,
-                      color: ["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308"][
-                        index % 5
-                      ],
-                    },
-                  ]),
-                )}
-              >
-                <Recharts.PieChart>
-                  <Recharts.Pie
-                    data={Object.entries(topCategories).map(([category, amount]) => ({
-                      category,
-                      amount,
-                    }))}
-                    dataKey="amount"
-                    nameKey="category"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={4}
-                  >
-                    {Object.keys(topCategories).map((category, index) => (
-                      <Recharts.Cell
-                        key={category}
-                        fill={["#0ea5e9", "#6366f1", "#14b8a6", "#f97316", "#eab308"][
-                          index % 5
-                        ]}
-                      />
-                    ))}
-                  </Recharts.Pie>
-                  <ChartTooltip />
-                </Recharts.PieChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Flujo de caja</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {cashFlowData.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Registra transacciones para ver el flujo de caja.
-              </p>
-            ) : (
-              <ChartContainer
-                id="finance-cash-flow"
-                config={{
-                  balance: { label: "Balance", color: "#0ea5e9" },
-                }}
-              >
-                <Recharts.LineChart
-                  data={cashFlowData}
-                  margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-                >
-                  <Recharts.CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <Recharts.XAxis dataKey="formattedDate" stroke="var(--muted-foreground)" />
-                  <Recharts.YAxis stroke="var(--muted-foreground)" />
-                  <ChartTooltip />
-                  <Recharts.Line
-                    type="monotone"
-                    dataKey="balance"
-                    stroke="#0ea5e9"
-                    strokeWidth={3}
-                    dot
-                  />
-                </Recharts.LineChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Gastos por categoría</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {Object.keys(groupedByCategory).length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              Registra gastos para ver el desglose.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {Object.entries(groupedByCategory)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 5)
+                .map(([category, amount]) => (
+                  <div key={category} className="flex items-center justify-between">
+                    <span className="text-sm text-foreground">{category}</span>
+                    <span className="text-sm font-semibold">${amount.toLocaleString()}</span>
+                  </div>
+                ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Transactions */}
@@ -561,11 +440,12 @@ export function FinanceView({ transactions, onTransactionsChange }: FinanceViewP
             <CardTitle className="text-lg">Top Gastos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {Object.keys(topCategories).length === 0 ? (
+            {Object.keys(groupedByCategory).length === 0 ? (
               <p className="text-muted-foreground text-center py-4">Sin gastos registrados</p>
             ) : (
-              Object.entries(topCategories)
+              Object.entries(groupedByCategory)
                 .sort(([, a], [, b]) => b - a)
+                .slice(0, 5)
                 .map(([category, amount]) => (
                   <div key={category} className="flex items-center justify-between">
                     <span className="text-sm text-foreground">{category}</span>
