@@ -73,12 +73,14 @@ export function KanbanBoard({ tasks, onTasksChange }: KanbanBoardProps) {
 
     const activeTaskId = active.id as string
     const overId = over.id as string
+    const activeIsSelected = selectedTasks.has(activeTaskId)
+    const movedTaskIds = activeIsSelected ? selectedTasks : new Set([activeTaskId])
 
     // Si se suelta en una columna
     const targetColumn = columns.find((c) => c.id === overId)
     if (targetColumn) {
       const updatedTasks = tasks.map((task) =>
-        task.id === activeTaskId ? { ...task, status: targetColumn.id } : task
+        movedTaskIds.has(task.id) ? { ...task, status: targetColumn.id } : task
       )
       onTasksChange(updatedTasks)
       return
@@ -87,16 +89,23 @@ export function KanbanBoard({ tasks, onTasksChange }: KanbanBoardProps) {
     // Si se suelta sobre otra tarea
     const overTask = tasks.find((t) => t.id === overId)
     if (overTask) {
-      const activeTask = tasks.find((t) => t.id === activeTaskId)
-      if (activeTask && activeTask.status !== overTask.status) {
+      if (activeIsSelected) {
         const updatedTasks = tasks.map((task) =>
-          task.id === activeTaskId ? { ...task, status: overTask.status } : task
+          movedTaskIds.has(task.id) ? { ...task, status: overTask.status } : task
         )
         onTasksChange(updatedTasks)
       } else {
-        const oldIndex = tasks.findIndex((t) => t.id === activeTaskId)
-        const newIndex = tasks.findIndex((t) => t.id === overId)
-        onTasksChange(arrayMove(tasks, oldIndex, newIndex))
+        const activeTask = tasks.find((t) => t.id === activeTaskId)
+        if (activeTask && activeTask.status !== overTask.status) {
+          const updatedTasks = tasks.map((task) =>
+            task.id === activeTaskId ? { ...task, status: overTask.status } : task
+          )
+          onTasksChange(updatedTasks)
+        } else {
+          const oldIndex = tasks.findIndex((t) => t.id === activeTaskId)
+          const newIndex = tasks.findIndex((t) => t.id === overId)
+          onTasksChange(arrayMove(tasks, oldIndex, newIndex))
+        }
       }
     }
   }
